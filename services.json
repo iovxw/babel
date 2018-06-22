@@ -1,0 +1,11 @@
+{
+    "deepin": {
+        "title": "Deepin BBS",
+        "link": "https://bbs.deepin.org",
+        "entries": "#threadlist > div > table > tbody",
+        "entry_title": ".article-title a",
+        "entry_link": ".article-title a|href",
+        "entry_author": ".author a",
+        "entry_updated": ".last-reply span[title]|title"
+    }
+}
