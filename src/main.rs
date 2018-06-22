@@ -195,6 +195,9 @@ fn index(
                 let entry = fill_entry(entry_element, &feed_cfg)?;
                 entries.push(entry);
             }
+            if entries.is_empty() {
+                return Err(actix_web::error::ErrorInternalServerError("entries selector"));
+            }
             feed.set_entries(entries);
             Ok(HttpResponse::Ok().content_type("application/xml").body(feed.to_string()))
         })
