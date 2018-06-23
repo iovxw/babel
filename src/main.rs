@@ -1,45 +1,33 @@
+#![feature(rust_2018_preview)]
+#![feature(rust_2018_idioms)]
 #![feature(nll)]
 #![feature(proc_macro_non_items)]
 #![feature(generators)]
-#![feature(crate_visibility_modifier)]
 #![feature(transpose_result)]
 
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
-
-extern crate env_logger;
-extern crate log;
-
-extern crate actix;
-extern crate actix_web;
-
-#[macro_use]
-extern crate structopt;
-extern crate atom_syndication as atom;
-extern crate chrono;
-extern crate failure;
-extern crate futures_await as futures;
-extern crate scraper;
-extern crate uuid;
-
-mod selector;
-
-use selector::{Selector, SelectorEx};
+use atom_syndication as atom;
+use chrono;
+use env_logger;
+use failure;
+use serde_derive::Deserialize;
+use serde_json;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::net::SocketAddr;
 
 use actix_web::{
-    dev::AsyncResult, http, server, App, Either, HttpMessage, HttpResponse, Path, Responder,
+    self, dev::AsyncResult, http, server, App, Either, HttpMessage, HttpResponse, Path, Responder,
 };
 use failure::ResultExt;
-use futures::prelude::*;
+use futures_await::{self as futures, prelude::*};
 use scraper::{ElementRef, Html};
 use structopt::StructOpt;
-use uuid::Uuid;
+use uuid::{self, Uuid};
+
+mod selector;
+
+use crate::selector::{Selector, SelectorEx};
 
 const UA: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0";
 

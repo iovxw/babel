@@ -1,7 +1,10 @@
+cargo-features = ["edition"]
+
 [package]
 name = "babel"
 version = "0.1.0"
 authors = ["iovxw <iovxw@outlook.com>"]
+edition = '2018'
 
 [dependencies]
 failure = "0.1"
@@ -14,8 +17,8 @@ serde_derive = "1.0"
 serde_json = "1.0"
 log = "0.4"
 env_logger = "0.5"
-futures = "0.1"
-futures-await = "0.1"
+# A fork that fixed compatibility with Rust 2018 edition
+futures-await = { path = "futures-await" }
 tokio = "0.1"
 atom_syndication = "0.6"
 chrono = "0.4"
