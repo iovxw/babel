@@ -1,8 +1,8 @@
 use std::fmt;
 use std::ops::Deref;
 
-use scraper::Selector as RawSelector;
-use serde::de::{self, Deserialize, Deserializer, Visitor};
+use ::scraper::Selector as RawSelector;
+use ::serde::de::{self, Deserialize, Deserializer, Visitor};
 
 #[derive(Debug)]
 crate struct SelectorEx {
@@ -15,29 +15,30 @@ impl<'de> Deserialize<'de> for SelectorEx {
     where
         D: Deserializer<'de>,
     {
-        struct InnerVisitor;
+        deserializer.deserialize_str(SelectorExVisitor)
+    }
+}
 
-        impl<'de> Visitor<'de> for InnerVisitor {
-            type Value = SelectorEx;
+struct SelectorExVisitor;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a valid CSS selector and attr")
-            }
+impl<'de> Visitor<'de> for SelectorExVisitor {
+    type Value = SelectorEx;
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let mut iter = v.splitn(2, '|');
-                let selector = SelectorVisitor.visit_str(
-                    iter.next()
-                        .ok_or_else(|| de::Error::invalid_length(1, &self))?,
-                )?;
-                let attr = iter.next().map(ToOwned::to_owned);
-                Ok(SelectorEx { selector, attr })
-            }
-        }
-        deserializer.deserialize_str(InnerVisitor)
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid CSS selector and attr")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        let mut iter = v.splitn(2, '|');
+        let selector = SelectorVisitor.visit_str(
+            iter.next()
+                .ok_or_else(|| de::Error::invalid_length(1, &self))?,
+        )?;
+        let attr = iter.next().map(ToOwned::to_owned);
+        Ok(SelectorEx { selector, attr })
     }
 }
 

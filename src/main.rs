@@ -1,33 +1,32 @@
-#![feature(rust_2018_preview)]
-#![feature(rust_2018_idioms)]
+#![feature(uniform_paths)]
 #![feature(nll)]
 #![feature(proc_macro_non_items)]
 #![feature(generators)]
 #![feature(transpose_result)]
 
-use atom_syndication as atom;
-use chrono;
-use env_logger;
-use failure;
-use serde_derive::Deserialize;
-use serde_json;
+use ::atom_syndication as atom;
+use ::chrono;
+use ::env_logger;
+use ::failure;
+use ::serde_derive::Deserialize;
+use ::serde_json;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::net::SocketAddr;
 
-use actix_web::{
+use ::actix_web::{
     self, dev::AsyncResult, http, server, App, Either, HttpMessage, HttpResponse, Path, Responder,
 };
-use failure::ResultExt;
-use futures_await::{self as futures, prelude::*};
-use scraper::{ElementRef, Html};
-use structopt::StructOpt;
-use uuid::{self, Uuid};
+use ::failure::ResultExt;
+use ::futures_await::{self as futures, prelude::{await, async_block, *}};
+use ::scraper::{ElementRef, Html};
+use ::structopt::StructOpt;
+use ::uuid::{self, Uuid};
 
 mod selector;
 
-use crate::selector::{Selector, SelectorEx};
+use selector::{Selector, SelectorEx};
 
 const UA: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0";
 
@@ -38,7 +37,11 @@ struct Opt {
     /// Listening address
     #[structopt(short = "a", long = "addr", default_value = "127.0.0.1:8777")]
     addr: SocketAddr,
-    #[structopt(short = "c", long = "config", default_value = "./services.json")]
+    #[structopt(
+        short = "c",
+        long = "config",
+        default_value = "./services.json"
+    )]
     config: String,
 }
 
@@ -61,10 +64,9 @@ fn get_config() -> &'static HashMap<String, Feed> {
 }
 
 fn init_config(path: &str) -> Result<(), failure::Error> {
-    let config: HashMap<String, Feed> =
-        serde_json::from_reader(
-            File::open(path).context(format!("Failed to open config file: {}", path))?,
-        ).context(format!("Failed to parse config file: {}", path))?;
+    let config: HashMap<String, Feed> = serde_json::from_reader(
+        File::open(path).context(format!("Failed to open config file: {}", path))?,
+    ).context(format!("Failed to parse config file: {}", path))?;
     unsafe {
         // Put on the heap to make it 'static
         CONFIG = Box::into_raw(Box::new(config));
@@ -85,8 +87,7 @@ fn select(entry_element: &ElementRef, selector: &SelectorEx) -> Result<String, a
             .attr(attr)
             .ok_or_else(|| {
                 actix_web::error::ErrorInternalServerError(format!("selector: {:?}", selector))
-            })?
-            .to_string()
+            })?.to_string()
     } else {
         element.text().collect()
     };
@@ -212,7 +213,7 @@ fn main() -> Result<(), failure::Error> {
             .middleware(actix_web::middleware::Logger::default())
             .route("/{id}", http::Method::GET, index)
     }).bind(opt.addr)
-        .unwrap()
-        .run();
+    .unwrap()
+    .run();
     Ok(())
 }
