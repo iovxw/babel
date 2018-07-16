@@ -21,10 +21,10 @@ impl<'de> Deserialize<'de> for SelectorEx {
 
 struct SelectorExVisitor;
 
-impl<'de> Visitor<'de> for SelectorExVisitor {
+impl Visitor<'_> for SelectorExVisitor {
     type Value = SelectorEx;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a valid CSS selector and attr")
     }
 
@@ -64,10 +64,10 @@ impl Deref for Selector {
 
 struct SelectorVisitor;
 
-impl<'de> Visitor<'de> for SelectorVisitor {
+impl Visitor<'_> for SelectorVisitor {
     type Value = Selector;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a valid CSS selector")
     }
 
@@ -87,8 +87,8 @@ impl<'de> Visitor<'de> for SelectorVisitor {
 
 struct SelectorVisitorError<'a>(&'a str, u32, u32);
 
-impl<'a> fmt::Display for SelectorVisitorError<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Display for SelectorVisitorError<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "\"{}\" is not a valid selector({}:{})",

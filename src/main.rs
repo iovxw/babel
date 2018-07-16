@@ -74,7 +74,7 @@ fn init_config(path: &str) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn select(entry_element: &ElementRef, selector: &SelectorEx) -> Result<String, actix_web::Error> {
+fn select(entry_element: &ElementRef<'_>, selector: &SelectorEx) -> Result<String, actix_web::Error> {
     let element = entry_element
         .select(&selector.selector)
         .next()
@@ -94,7 +94,7 @@ fn select(entry_element: &ElementRef, selector: &SelectorEx) -> Result<String, a
     Ok(r)
 }
 
-fn fill_entry(entry_element: ElementRef, feed_cfg: &Feed) -> Result<atom::Entry, actix_web::Error> {
+fn fill_entry(entry_element: ElementRef<'_>, feed_cfg: &Feed) -> Result<atom::Entry, actix_web::Error> {
     let mut entry = atom::Entry::default();
     let title = select(&entry_element, &feed_cfg.entry_title)?;
     entry.set_title(title);
@@ -190,7 +190,7 @@ fn index(
             feed.set_entries(entries);
             Ok(HttpResponse::Ok().content_type("application/xml").body(feed.to_string()))
         })
-            as Box<Future<Item = HttpResponse, Error = actix_web::Error>>)
+            as Box<dyn Future<Item = HttpResponse, Error = actix_web::Error>>)
     } else {
         Either::A(HttpResponse::NotFound())
     }
