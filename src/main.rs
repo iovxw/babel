@@ -1,28 +1,30 @@
 #![feature(uniform_paths)]
 #![feature(nll)]
-#![feature(proc_macro_non_items)]
 #![feature(generators)]
 #![feature(transpose_result)]
-
-use ::atom_syndication as atom;
-use ::chrono;
-use ::env_logger;
-use ::failure;
-use ::serde_derive::Deserialize;
-use ::serde_json;
+#![feature(await_macro)]
+#![feature(async_await)]
+#![feature(futures_api)]
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::net::SocketAddr;
 
-use ::actix_web::{
+use actix_web::{
     self, dev::AsyncResult, http, server, App, Either, HttpMessage, HttpResponse, Path, Responder,
 };
-use ::failure::ResultExt;
-use ::futures_await::{self as futures, prelude::{await, async_block, *}};
-use ::scraper::{ElementRef, Html};
-use ::structopt::StructOpt;
-use ::uuid::{self, Uuid};
+use atom_syndication as atom;
+use chrono;
+use env_logger;
+use failure;
+use failure::ResultExt;
+use futures::prelude::*;
+use scraper::{ElementRef, Html};
+use serde_derive::Deserialize;
+use serde_json;
+use structopt::StructOpt;
+use tokio::{async_await::compat::backward::Compat, await};
+use uuid::{self, Uuid};
 
 mod selector;
 
@@ -74,7 +76,10 @@ fn init_config(path: &str) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn select(entry_element: &ElementRef<'_>, selector: &SelectorEx) -> Result<String, actix_web::Error> {
+fn select(
+    entry_element: &ElementRef<'_>,
+    selector: &SelectorEx,
+) -> Result<String, actix_web::Error> {
     let element = entry_element
         .select(&selector.selector)
         .next()
@@ -94,7 +99,10 @@ fn select(entry_element: &ElementRef<'_>, selector: &SelectorEx) -> Result<Strin
     Ok(r)
 }
 
-fn fill_entry(entry_element: ElementRef<'_>, feed_cfg: &Feed) -> Result<atom::Entry, actix_web::Error> {
+fn fill_entry(
+    entry_element: ElementRef<'_>,
+    feed_cfg: &Feed,
+) -> Result<atom::Entry, actix_web::Error> {
     let mut entry = atom::Entry::default();
     let title = select(&entry_element, &feed_cfg.entry_title)?;
     entry.set_title(title);
@@ -155,41 +163,49 @@ fn index(
     info: Path<String>,
 ) -> impl Responder<Item = AsyncResult<HttpResponse>, Error = actix_web::Error> {
     if let Some(feed_cfg) = get_config().get(&*info) {
-        Either::B(Box::new(async_block! {
-            let resp = await!(actix_web::client::get(&feed_cfg.link)
-                              .header("User-Agent", UA)
-                              .finish()
-                              .expect("request builder")
-                              .send())?;
+        Either::B(Box::new(Compat::new(
+            async move {
+                let resp = await!(
+                    actix_web::client::get(&feed_cfg.link)
+                        .header("User-Agent", UA)
+                        .finish()
+                        .expect("request builder")
+                        .send()
+                )?;
 
-            if !resp.status().is_success() {
-                // error
-            }
-            let body = await!(resp.body().limit(524_288))?;
-            let html = Html::parse_document(&String::from_utf8_lossy(&body));
+                if !resp.status().is_success() {
+                    // error
+                }
+                let body = await!(resp.body().limit(524_288))?;
+                let html = Html::parse_document(&String::from_utf8_lossy(&body));
 
-            let mut feed = atom::Feed::default();
-            feed.set_title(feed_cfg.title.clone());
-            feed.set_subtitle(feed_cfg.subtitle.clone());
-            feed.set_updated(chrono::Local::now().to_rfc3339());
-            feed.set_id(Uuid::new_v5(&uuid::NAMESPACE_URL, &*info).urn().to_string());
-            // feed.set_generator();
+                let mut feed = atom::Feed::default();
+                feed.set_title(feed_cfg.title.clone());
+                feed.set_subtitle(feed_cfg.subtitle.clone());
+                feed.set_updated(chrono::Local::now().to_rfc3339());
+                feed.set_id(Uuid::new_v5(&uuid::NAMESPACE_URL, &*info).urn().to_string());
+                // feed.set_generator();
 
-            let mut link = atom::Link::default();
-            link.set_href(feed_cfg.link.clone());
-            feed.set_links(vec![link]);
+                let mut link = atom::Link::default();
+                link.set_href(feed_cfg.link.clone());
+                feed.set_links(vec![link]);
 
-            let mut entries = Vec::new();
-            for entry_element in html.select(&feed_cfg.entries) {
-                let entry = fill_entry(entry_element, &feed_cfg)?;
-                entries.push(entry);
-            }
-            if entries.is_empty() {
-                return Err(actix_web::error::ErrorInternalServerError("entries selector"));
-            }
-            feed.set_entries(entries);
-            Ok(HttpResponse::Ok().content_type("application/xml").body(feed.to_string()))
-        })
+                let mut entries = Vec::new();
+                for entry_element in html.select(&feed_cfg.entries) {
+                    let entry = fill_entry(entry_element, &feed_cfg)?;
+                    entries.push(entry);
+                }
+                if entries.is_empty() {
+                    return Err(actix_web::error::ErrorInternalServerError(
+                        "entries selector",
+                    ));
+                }
+                feed.set_entries(entries);
+                Ok(HttpResponse::Ok()
+                    .content_type("application/xml")
+                    .body(feed.to_string()))
+            },
+        ))
             as Box<dyn Future<Item = HttpResponse, Error = actix_web::Error>>)
     } else {
         Either::A(HttpResponse::NotFound())

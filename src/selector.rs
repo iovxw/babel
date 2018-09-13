@@ -1,11 +1,11 @@
 use std::fmt;
 use std::ops::Deref;
 
-use ::scraper::Selector as RawSelector;
-use ::serde::de::{self, Deserialize, Deserializer, Visitor};
+use scraper::Selector as RawSelector;
+use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 #[derive(Debug)]
-crate struct SelectorEx {
+pub struct SelectorEx {
     pub selector: Selector,
     pub attr: Option<String>,
 }
@@ -43,7 +43,7 @@ impl Visitor<'_> for SelectorExVisitor {
 }
 
 #[derive(Debug)]
-crate struct Selector(RawSelector);
+pub struct Selector(RawSelector);
 
 impl<'de> Deserialize<'de> for Selector {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
